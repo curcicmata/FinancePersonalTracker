@@ -1,0 +1,189 @@
+﻿@page "/family-expenses"
+@using FinancePersonalTracker.Interface
+@using FinancePersonalTracker.Models
+@inject IExpenseService ExpenseService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+
+<MudItem xs="1">
+    <MudDatePicker Label="Month"
+    @bind-Date="_yearMonth"
+    OpenTo="OpenTo.Year"
+    FixDay="1"
+    DateFormat="MM/yyyy" />
+
+</MudItem>
+<MudFlexBreak></MudFlexBreak>
+<br />
+<MudGrid>
+    <MudItem xs="3">
+        <MudTextField @bind-Value="newExpenseAmount"
+        Label="Add Expense Amount"
+        Placeholder="Enter amount and press Enter"
+        Adornment="Adornment.Start"
+        AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+        Immediate="true"
+        OnKeyDown="HandleKeyDown"
+        TextUpdateSuppression="false"
+        Class="mb-4" />
+    </MudItem>
+    <MudItem xs="4">
+        <MudRadioGroup @bind-Value="newExpenseType" Row="true">
+            <MudRadio Value="ExpenseType.Expense" Label="Expense" />
+            <MudRadio Value="ExpenseType.Salary" Label="Salary" />
+        </MudRadioGroup>
+    </MudItem>
+
+</MudGrid>
+
+<MudButton OnClick="OpenCreateFamilyDialog" Color="Color.Primary">
+    Create Family Group
+</MudButton>
+
+
+@if (IsLoading)
+{
+    <MudProgressCircular Indeterminate Color="Color.Primary" />
+}
+else
+{
+    @foreach (var user in userProfileList)
+    {
+        <MudCard Class="mt-4">
+            <MudCardContent>
+                <MudText Typo="Typo.h6">@user.DisplayName</MudText>
+                <MudTable Items="@user.Expenses.Where(x => x.Date.Year == _yearMonth?.Year && x.Date.Month == _yearMonth?.Month).OrderByDescending(e => e.Date)">
+                    <HeaderContent>
+                        <MudTh>Amount</MudTh>
+                        <MudTh>Date</MudTh>
+                        <MudTh></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd Style="@(context.ExpenseType == 0 ? "color: black; background-color: white;" : "color: blue; background-color: white; font-weight: bold;")">@context.Amount</MudTd>
+                        <MudTd>@context.Date.ToShortDateString()</MudTd>
+                        <MudTd>
+                            @if (context.UserProfileId == CurrentUserProfileId)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                Color="Color.Error"
+                                OnClick="@(() => DeleteExpense(context.Id))" />
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+                <MudText Class="mt-2" Typo="Typo.subtitle2" Color="@(netIncome < 0 ? Color.Error : Color.Primary)">
+                    Total left for selected month: <b>@netIncome</b>
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    }
+
+}
+
+
+@code {
+    private UserProfile user = new();
+    private Dictionary<Guid, decimal> UserTotals = new();
+    private Guid? CurrentUserProfileId;
+    private bool IsLoading = true;
+    private List<UserProfile>? userProfileList = new();
+    private decimal? newExpenseAmount = 0;
+    public List<Expense> Expenses { get; set; } = new();
+    private DateTime? _yearMonth { get; set; } = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+    private ExpenseType newExpenseType = ExpenseType.Expense;
+    public decimal? netIncome { get; set; }
+
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && newExpenseAmount > 0 && CurrentUserProfileId != null)
+        {
+            var newExpense = new Expense
+                {
+                    Id = Guid.NewGuid(),
+                    UserProfileId = CurrentUserProfileId.Value,
+                    Amount = newExpenseAmount.Value,
+                    ExpenseType = newExpenseType,
+                    Date = new DateTime(_yearMonth!.Value.Year, _yearMonth.Value.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+                };
+
+            await ExpenseService.AddExpenseAsync(newExpense);
+
+            newExpenseAmount = null;
+
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(50);
+
+            await OnInitializedAsync();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        IsLoading = true;
+        // _yearMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var identityUserId = user.FindFirst(c => c.Type.Contains("nameidentifier"))?.Value;
+
+        var currentProfile = await ExpenseService.GetAllUserProfilesWithExpensesAsync(identityUserId!);
+        // CurrentUserProfileId = currentProfile.FirstOrDefault(p => p.IdentityUserId == identityUserId)?.Id;
+        var userProfile = currentProfile.FirstOrDefault(p => p.IdentityUserId == identityUserId);
+
+        CurrentUserProfileId = userProfile?.Id;
+        userProfileList = currentProfile;
+
+        netIncome = userProfile != null
+            ? CalculateNetIncome(userProfile.Expenses.ToList(), _yearMonth)
+            : 0;
+
+        IsLoading = false;
+    }
+
+    private async Task DeleteExpense(Guid expenseId)
+    {
+        await ExpenseService.DeleteExpenseAsync(expenseId);
+        await OnInitializedAsync();
+    }
+
+    private decimal CalculateNetIncome(List<Expense> expenses, DateTime? selectedMonth)
+    {
+        if (selectedMonth is null)
+            return 0;
+
+        if (expenses.Count == 0)
+        {
+            return 0;
+        }
+
+        var monthExpenses = expenses
+            .Where(e => e.Date.Year == selectedMonth.Value.Year && e.Date.Month == selectedMonth.Value.Month);
+
+        var salary = monthExpenses
+            .Where(e => e.ExpenseType == ExpenseType.Salary)
+            .Sum(e => e.Amount);
+
+        var expense = monthExpenses
+            .Where(e => e.ExpenseType == ExpenseType.Expense)
+            .Sum(e => e.Amount);
+
+        return salary - expense;
+    }
+
+    private async Task OpenCreateFamilyDialog()
+    {
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = DialogService.Show<CreateFamilyGroupDialog>("Create Family Group", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Family send!", Severity.Success);
+
+        }
+    }
+}

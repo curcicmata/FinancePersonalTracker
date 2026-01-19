@@ -1,0 +1,137 @@
+﻿@page "/chart"
+
+@using System.Globalization
+@using FinancePersonalTracker.Interface
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IExpenseService ExpenseService
+
+<h3>Chart</h3>
+
+<MudPaper Class="p-4">
+    <MudGrid>
+        <MudItem xs="2" sm="2">
+            <MudSelect T="int" Label="Select Year" Dense="true" Variant="Variant.Filled"
+                       @bind-Value="SelectedYear"
+                       Style="width: 400px;"
+                       Class="mb-4">
+                @foreach (var year in _years)
+                {
+                    <MudSelectItem Value="@year">@year</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+
+    <div Style="width: 100%; overflow-x: auto;">
+        <MudChart ChartType="ChartType.Bar"
+                  ChartSeries="@_series"
+                  XAxisLabels="@_xAxisLabels"
+                  Width="1200px"
+                  Height="550px"
+                  ChartOptions="_chartOptions"
+                  AxisChartOptions="_axisChartOptions" />
+    </div>
+</MudPaper>
+<br />
+<MudPaper>
+    <MudGrid>
+        <MudItem xs="12">
+            <MudText>
+                <b>Salary together in @SelectedYear. year:</b> @totalSalaryTogether
+            </MudText>
+        </MudItem>
+        <MudItem xs="12">
+            <MudText>
+                <b>Expenses together in @SelectedYear. year:</b> @totalExpensesTogether
+            </MudText>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    // private int _selectedYear = DateTime.Now.Year;
+    private List<int> _years = Enumerable.Range(2020, 10).ToList(); // Example: 2020-2025
+    private double? totalExpensesTogether;
+    private double? totalSalaryTogether;
+
+    private AxisChartOptions _axisChartOptions = new AxisChartOptions();
+    private ChartOptions _chartOptions = new();
+    private List<ChartSeries> _series = new();
+    private string[] _xAxisLabels = CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedMonthNames.Take(12).ToArray();
+
+    private int _selectedYear = DateTime.Now.Year;
+    private int SelectedYear
+    {
+        get => _selectedYear;
+        set
+        {
+            if (_selectedYear != value)
+            {
+                _selectedYear = value;
+                _ = LoadChartData(_selectedYear);
+            }
+        }
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadChartData(_selectedYear);
+
+        _axisChartOptions = new AxisChartOptions()
+        {
+            StackedBarWidthRatio = 50,
+            MatchBoundsToSize = true,
+        };
+
+        _chartOptions = new ChartOptions()
+        {
+            XAxisLines = true,
+            YAxisTicks = 20,
+            MaxNumYAxisTicks = 20,
+            // ChartPalette = ["#009933", "#ff6666", "#00aaff", "#ff6600", "#fc0314", "#2803fc"]
+
+        };
+
+    }
+
+    private async void OnYearChanged()
+    {
+        var newYear = _selectedYear;
+        await LoadChartData(newYear);
+    }
+
+
+    private async Task LoadChartData(int year)
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var identityUserId = user.FindFirst(c => c.Type.Contains("nameidentifier"))?.Value;
+
+        var data = await ExpenseService.GetMonthlyTotalsForFamilyAsync(identityUserId!, year);
+
+        totalSalaryTogether = data.TotalSalaries.Sum();
+        totalExpensesTogether = data.TotalExpenses.Sum();
+
+        _series = new List<ChartSeries>();
+
+        foreach (var kvp in data.ExpensesByUser)
+        {
+            _series.Add(new ChartSeries { Name = $"{kvp.Key} - Expenses", Data = kvp.Value });
+        }
+
+        foreach (var kvp in data.SalariesByUser)
+        {
+            _series.Add(new ChartSeries { Name = $"{kvp.Key} - Salaries", Data = kvp.Value });
+        }
+
+        if (data.ExpensesByUser.Count > 1 || data.SalariesByUser.Count > 1)
+        {
+        // Optional: Add family totals
+        _series.Add(new ChartSeries { Name = "Total Expenses", Data = data.TotalExpenses });
+        _series.Add(new ChartSeries { Name = "Total Salaries", Data = data.TotalSalaries });            
+        }
+
+        StateHasChanged();
+    }
+}

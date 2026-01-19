@@ -1,0 +1,119 @@
+﻿@page "/family"
+@inject IFamilyGroupService FamilyGroupService
+@inject AuthenticationStateProvider AuthStateProvider
+@using FinancePersonalTracker.Interface
+@using FinancePersonalTracker.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using MudBlazor
+
+<MudPaper Class="pa-4">
+    <MudText Typo="Typo.h5">Family Group Management</MudText>
+
+    @if (!IsInFamilyGroup)
+    {
+        <MudTextField @bind-Value="NewFamilyName" Label="Family Name" />
+        <MudButton OnClick="CreateFamilyGroup" Color="Color.Primary" Variant="Variant.Filled" Class="mt-2">Create Family</MudButton>
+    }
+    else
+    {
+        <MudText Typo="Typo.h6">Family: @FamilyName</MudText>
+
+        <MudText Typo="Typo.subtitle2" Class="mt-4">Invite Member</MudText>
+        <MudTextField @bind-Value="InviteEmail" Label="Invite by Email" />
+        <MudButton OnClick="SendInvite" Color="Color.Secondary" Variant="Variant.Filled" Class="mt-2">Send Invite</MudButton>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.subtitle2">Family Members</MudText>
+        <MudTable Items="@FamilyMembers">
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Email</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.DisplayName</MudTd>
+                <MudTd>@context.DisplayName</MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+
+    @if (PendingInvites.Any())
+    {
+        <MudDivider Class="my-4" />
+        <MudText Typo="Typo.subtitle2">Pending Invitations</MudText>
+
+        <MudTable Items="@PendingInvites">
+            <HeaderContent>
+                <MudTh>Pending invites</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Email</MudTd>
+                <MudTd>
+                    <MudButton OnClick="() => AcceptInvite(context.Id, context.Email)" Color="Color.Success" Variant="Variant.Outlined">Accept</MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudPaper>
+
+@code {
+    private string? CurrentUserId;
+    private string? CurrentUserEmail;
+    private bool IsInFamilyGroup;
+    private string? FamilyName;
+    private string NewFamilyName = string.Empty;
+    private string InviteEmail = string.Empty;
+    private Guid? FamilyGroupId;
+
+    private List<UserProfile> FamilyMembers = new();
+    private List<FamilyGroupInvite> PendingInvites = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            CurrentUserId = user.FindFirst(c => c.Type.Contains("nameidentifier"))?.Value;
+            CurrentUserEmail = user.Identity.Name;
+
+            var result = await FamilyGroupService.GetFamilyDataAsync(CurrentUserId!);
+
+            IsInFamilyGroup = result.IsInFamily;
+            FamilyName = result.FamilyName;
+            FamilyMembers = result.FamilyMembers;
+            PendingInvites = result.PendingInvites;
+            FamilyGroupId = PendingInvites.Any() ? PendingInvites.FirstOrDefault().FamilyGroupId : null;
+        }
+    }
+
+    private async Task CreateFamilyGroup()
+    {
+        if (!string.IsNullOrWhiteSpace(NewFamilyName) && CurrentUserId != null)
+        {
+            await FamilyGroupService.CreateFamilyGroupAsync(NewFamilyName, CurrentUserId);
+            await OnInitializedAsync();
+        }
+    }
+
+    private async Task SendInvite()
+    {
+        if (!string.IsNullOrWhiteSpace(InviteEmail) && CurrentUserId != null)
+        {
+            await FamilyGroupService.InviteUserAsync(FamilyGroupId.Value, InviteEmail);
+            InviteEmail = string.Empty;
+            await OnInitializedAsync();
+        }
+    }
+
+    private async Task AcceptInvite(Guid inviteId, string email)
+    {
+        if (CurrentUserId != null && CurrentUserEmail != null)
+        {
+            await FamilyGroupService.AcceptInviteAsync(FamilyGroupId.Value, email);
+            await OnInitializedAsync();
+        }
+    }
+}

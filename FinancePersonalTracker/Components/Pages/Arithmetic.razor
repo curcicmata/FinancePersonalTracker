@@ -1,0 +1,394 @@
+﻿@page "/arithmetic"
+
+<MudPaper Elevation="2" Class="pa-4 max-width-400 mx-auto">
+
+    <MudText Typo="Typo.h5" Class="mb-4">
+        Arithmetic Practice
+    </MudText>
+
+    <MudStack Spacing="3">
+
+        <MudSelect T="string" Label="Operation" @bind-Value="Operation">
+            <MudSelectItem Value="@("+")">Addition</MudSelectItem>
+            <MudSelectItem Value="@("-")">Subtraction</MudSelectItem>
+        </MudSelect>
+
+        <MudSelect T="string" Label="Difficulty" @bind-Value="Difficulty">
+            <MudSelectItem Value="@("Easy")">Easy (single digit)</MudSelectItem>
+            <MudSelectItem Value="@("Hard")">Hard (double digit)</MudSelectItem>
+        </MudSelect>
+
+        <MudTextField T="int"
+                      Label="Max Result"
+                      @bind-Value="MaxResult"
+                      InputType="InputType.Number" />
+
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   OnClick="GenerateQuestion">
+            Generate Question
+        </MudButton>
+
+        @if (QuestionGenerated)
+        {
+            <MudDivider />
+
+            <!-- Form enables ENTER key submit -->
+            <MudGrid AlignItems="AlignItems.Center" Spacing="2">
+
+                @if (MissingLeft)
+                {
+                    <MudItem>
+                        <MudTextField T="int?"
+                                      @bind-Value="UserAnswer"
+                                      InputType="InputType.Number"
+                                      Immediate="true"
+                                      TextUpdateSuppression="false"
+                                      OnKeyDown="HandleKeyDown"
+                                      AutoFocus="true"
+                                      Style="width:90px" />
+                    </MudItem>
+
+                    <MudItem>
+                        <MudText>@Operation @Right = @Result</MudText>
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem>
+                        <MudText>@Left @Operation</MudText>
+                    </MudItem>
+
+                    <MudItem>
+                        <MudTextField T="int?"
+                                      @bind-Value="UserAnswer"
+                                      InputType="InputType.Number"
+                                      Immediate="true"
+                                      TextUpdateSuppression="false"
+                                      OnKeyDown="HandleKeyDown"
+                                      AutoFocus="true"
+                                      Style="width:90px" />
+                    </MudItem>
+
+                    <MudItem>
+                        <MudText>= @Result</MudText>
+                    </MudItem>
+                }
+
+                <MudItem xs="12">
+                    <MudButton OnClick="CheckAnswer"
+                               Variant="Variant.Filled"
+                               Color="Color.Success"
+                               Class="mt-3">
+                        Check
+                    </MudButton>
+                </MudItem>
+
+            </MudGrid>
+
+        }
+
+        @if (!string.IsNullOrEmpty(Message))
+        {
+            <MudText Typo="Typo.subtitle1" Class="mt-2">
+                <b>@Message</b>
+            </MudText>
+        }
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.subtitle1">📊 Progress</MudText>
+        <MudProgressLinear Value="Accuracy" Color="Color.Primary" />
+        <MudText>Accuracy: @Accuracy%</MudText>
+        <MudText>Total questions: @TotalQuestions</MudText>
+        <MudText>Correct: @CorrectAnswers</MudText>
+
+
+
+    </MudStack>
+
+</MudPaper>
+
+@code {
+    string Operation = "+";
+    string Difficulty = "Easy";
+    int MaxResult = 50;
+
+    int Left;
+    int Right;
+    int Result;
+
+    int? UserAnswer;
+    bool MissingLeft;
+    bool QuestionGenerated;
+    int TotalQuestions;
+    int CorrectAnswers;
+
+    int Accuracy => TotalQuestions == 0 ? 0 : CorrectAnswers * 100 / TotalQuestions;
+
+    string? Message;
+
+    Random _random = new();
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await CheckAnswer();
+
+            // await InvokeAsync(StateHasChanged);
+            // await Task.Delay(50);
+
+            await OnInitializedAsync();
+        }
+    }
+
+    void GenerateQuestion()
+    {
+        int min = Difficulty == "Easy" ? 0 : 10;
+        int max = Difficulty == "Easy" ? 9 : 99;
+
+        MissingLeft = _random.Next(2) == 0;
+
+        if (Operation == "+")
+        {
+            Result = _random.Next(0, MaxResult + 1);
+            Right = _random.Next(min, max + 1);
+            Left = Result - Right;
+        }
+        else
+        {
+            Result = _random.Next(0, MaxResult + 1);
+            Right = _random.Next(min, max + 1);
+            Left = Result + Right;
+        }
+
+        if (Left < 0)
+        {
+            GenerateQuestion();
+            return;
+        }
+
+        UserAnswer = null;
+        Message = null;
+        QuestionGenerated = true;
+    }
+
+    async Task CheckAnswer()
+    {
+        if (UserAnswer == null)
+            return;
+
+        TotalQuestions++;
+
+        int correct = MissingLeft ? Left : Right;
+
+        Message = UserAnswer == correct
+            ? "✅ Correct!"
+            : $"❌ Wrong. Correct answer is {correct}";
+
+            StateHasChanged();
+            await Task.Delay(1500);
+
+        if (UserAnswer == correct)
+        {
+            CorrectAnswers++;
+            GenerateQuestion();
+        }
+    }
+} 
+
+
+@* @page "/arithmetic"
+@using MudBlazor
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-6">
+
+    <MudCard Elevation="6" Class="pa-6">
+        <MudText Typo="Typo.h4" Align="Align.Center">🧮 Math Game</MudText>
+
+        <MudDivider Class="my-4" />
+
+        <MudStack Spacing="2">
+
+            <MudSelect T="string" Label="Level" @bind-Value="Difficulty">
+                <MudSelectItem Value="@("Easy")">⭐ Easy</MudSelectItem>
+                <MudSelectItem Value="@("Medium")" Disabled="!MediumUnlocked">⭐⭐ Medium</MudSelectItem>
+                <MudSelectItem Value="@("Hard")" Disabled="!HardUnlocked">⭐⭐⭐ Hard</MudSelectItem>
+            </MudSelect>
+
+            <MudSelect T="string" Label="Operation" @bind-Value="Operation">
+                <MudSelectItem Value="@("+")">Addition</MudSelectItem>
+                <MudSelectItem Value="@("-")">Subtraction</MudSelectItem>
+            </MudSelect>
+
+            <MudNumericField T="int" Label="Max Result" @bind-Value="MaxResult" />
+
+            <MudButton Color="Color.Primary" Size="Size.Large" OnClick="StartGame">
+                ▶ Start Game
+            </MudButton>
+        </MudStack>
+    </MudCard>
+
+    @if (GameStarted)
+    {
+        <MudCard Elevation="6" Class="pa-6 mt-6">
+
+            <MudText Typo="Typo.h5" Align="Align.Center">
+                ⏱ @TimeLeft seconds
+            </MudText>
+
+            <MudProgressLinear Value="TimeLeft * 10" Color="Color.Error" Class="my-2" />
+
+            <MudDivider Class="my-4" />
+
+            <MudText Typo="Typo.h4" Align="Align.Center">
+                @if (MissingLeft)
+                {
+                    <MudNumericField T="int" @bind-Value="UserAnswer" Class="mx-2" Style="width:120px" />
+                    <span> @Operation @Right = @Result</span>
+                }
+                else
+                {
+                    <span>@Left @Operation </span>
+                    <MudNumericField T="int" @bind-Value="UserAnswer" Class="mx-2" Style="width:120px" />
+                    <span> = @Result</span>
+                }
+            </MudText>
+
+            <MudButton FullWidth Color="Color.Success" Size="Size.Large" Class="mt-4" OnClick="CheckAnswer">
+                ✔ Check
+            </MudButton>
+
+            <MudText Typo="Typo.h6" Align="Align.Center" Class="mt-3">@Message</MudText>
+
+            <MudDivider Class="my-4" />
+
+            <MudText Typo="Typo.subtitle1">📊 Progress</MudText>
+            <MudProgressLinear Value="Accuracy" Color="Color.Primary" />
+            <MudText>Accuracy: @Accuracy%</MudText>
+        </MudCard>
+    }
+
+</MudContainer>
+
+@code {
+    string Operation = "+";
+    string Difficulty = "Easy";
+    int MaxResult = 50;
+
+    bool GameStarted;
+
+    int Left, Right, Result;
+    bool MissingLeft;
+    int UserAnswer;
+
+    int TimeLeft = 10;
+    System.Timers.Timer? _timer;
+
+    int TotalQuestions;
+    int CorrectAnswers;
+
+    string Message = string.Empty;
+
+    bool MediumUnlocked;
+    bool HardUnlocked;
+
+    int Accuracy => TotalQuestions == 0 ? 0 : CorrectAnswers * 100 / TotalQuestions;
+
+    Random _random = new();
+
+    void StartGame()
+    {
+        GameStarted = true;
+        GenerateQuestion();
+    }
+
+    void GenerateQuestion()
+    {
+        int min = Difficulty switch
+        {
+            "Easy" => 0,
+            "Medium" => 5,
+            _ => 10
+        };
+
+        int max = Difficulty switch
+        {
+            "Easy" => 9,
+            "Medium" => 20,
+            _ => 99
+        };
+
+        MissingLeft = _random.Next(2) == 0;
+
+        if (Operation == "+")
+        {
+            Result = _random.Next(0, MaxResult + 1);
+            Right = _random.Next(min, max + 1);
+            Left = Result - Right;
+        }
+        else
+        {
+            Result = _random.Next(0, MaxResult + 1);
+            Right = _random.Next(min, max + 1);
+            Left = Result + Right;
+        }
+
+        if (Left < 0)
+        {
+            GenerateQuestion();
+            return;
+        }
+
+        UserAnswer = 0;
+        Message = string.Empty;
+        StartTimer();
+    }
+
+    void StartTimer()
+    {
+        _timer?.Dispose();
+        TimeLeft = 10;
+
+        _timer = new System.Timers.Timer(1000);
+        _timer.Elapsed += (_, _) => InvokeAsync(() =>
+        {
+            TimeLeft--;
+            if (TimeLeft <= 0)
+                CheckAnswer();
+            StateHasChanged();
+        });
+        _timer.Start();
+    }
+
+    void CheckAnswer()
+    {
+        _timer?.Stop();
+        TotalQuestions++;
+
+        int correct = MissingLeft ? Left : Right;
+
+        if (UserAnswer == correct)
+        {
+            CorrectAnswers++;
+            Message = "🎉 Correct!";
+        }
+        else
+        {
+            Message = $"❌ Correct answer: {correct}";
+        }
+
+        UnlockLevels();
+        GenerateQuestion();
+    }
+
+    void UnlockLevels()
+    {
+        if (Accuracy >= 70)
+            MediumUnlocked = true;
+
+        if (Accuracy >= 85)
+            HardUnlocked = true;
+    }
+} *@
