@@ -5,6 +5,7 @@ using FinancePersonalTracker.Interface;
 using FinancePersonalTracker.Models;
 using FinancePersonalTracker.Services;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
@@ -57,6 +58,13 @@ builder.Services.AddScoped<IFamilyGroupService, FamilyGroupService>();
 builder.Services.AddMudServices();
 
 var app = builder.Build();
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
