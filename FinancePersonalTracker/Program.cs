@@ -42,7 +42,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
-//builder.Services.Configure<SendGridOptions>(builder.Configuration.GetSection("SendGrid"));
+builder.Services.Configure<SendGridOptions>(builder.Configuration.GetSection("SendGrid"));
 //builder.Services.AddTransient<IEmailSender<ApplicationUser>, SendGridEmailSender>();
 //builder.Services.Configure<SendGridOptions>(builder.Configuration);
 

@@ -73,6 +73,16 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=FinancePersonalTracker;Username=appuser;Password=StrongAppPassword!
+      SendGrid__ApiKey: ${SENDGRID_API_KEY}
+      SendGrid__FromEmail: ${SENDGRID_FROM_EMAIL}
+      SendGrid__FromName: ${SENDGRID_FROM_NAME}
+      SmtpOptions__SmtpServer: ${SMTP_SERVER}
+      SmtpOptions__Port: ${SMTP_PORT}
+      SmtpOptions__Username: ${SMTP_USERNAME}
+      SmtpOptions__Password: ${SMTP_PASSWORD}
+      SmtpOptions__FromEmail: ${SMTP_FROM_EMAIL}
+      SmtpOptions__FromName: ${SMTP_FROM_NAME}
+      SmtpOptions__EnableSsl: ${SMTP_ENABLE_SSL}
       DOTNET_GC_SERVER: "1"
       DOTNET_GC_CONCURRENT: "1"
       DOTNET_GC_HEAP_HARD_LIMIT: "1500000000"
