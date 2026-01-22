@@ -37,8 +37,13 @@ COPY . .
 WORKDIR "/src/FinancePersonalTracker"
 RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
 
+#ENV ASPNETCORE_URLS=http://+:80
+ENV DOTNET_GC_SERVER=1
+ENV DOTNET_GC_CONCURRENT=1
+ENV DOTNET_GC_HEAP_HARD_LIMIT=1500000000
+ENV DOTNET_ThreadPool_MinThreads=4
+
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
-ENV ASPNETCORE_URLS=http://+:80
 ENTRYPOINT ["dotnet", "FinancePersonalTracker.dll"]

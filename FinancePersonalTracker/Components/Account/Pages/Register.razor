@@ -1,5 +1,4 @@
 ﻿@page "/Account/Register"
-
 @using System.ComponentModel.DataAnnotations
 @using System.Text
 @using System.Text.Encodings.Web
@@ -7,7 +6,7 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using FinancePersonalTracker.Data
-
+@using Microsoft.AspNetCore.Http
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
 @inject SignInManager<ApplicationUser> SignInManager
@@ -16,6 +15,7 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 @inject ApplicationDbContext _context
+@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>Register</PageTitle>
 
@@ -29,6 +29,12 @@
             <h2>Create a new account.</h2>
             <hr />
             <ValidationSummary class="text-danger" role="alert" />
+
+            <!-- Honeypot field (hidden from users, visible to bots) -->
+            <div style="position: absolute; left: -9999px; opacity: 0;" aria-hidden="true">
+                <InputText @bind-Value="Input.HoneypotField" id="website" autocomplete="off" tabindex="-1" />
+            </div>
+
             <div class="form-floating mb-3">
                 <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
                 <label for="Input.Email">Email</label>
@@ -44,7 +50,16 @@
                 <label for="Input.ConfirmPassword">Confirm Password</label>
                 <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+            <button type="submit" class="w-100 btn btn-lg btn-primary" disabled="@_isSubmitting">
+                @if (_isSubmitting)
+                {
+                    <span>Processing...</span>
+                }
+                else
+                {
+                    <span>Register</span>
+                }
+            </button>
         </EditForm>
     </div>
     <div class="col-lg-4 col-lg-offset-2">
@@ -58,6 +73,10 @@
 
 @code {
     private IEnumerable<IdentityError>? identityErrors;
+    private DateTime _formLoadTime = DateTime.UtcNow;
+    private bool _isSubmitting = false;
+    private static readonly Dictionary<string, Queue<DateTime>> _registrationAttempts = new();
+    private static readonly object _rateLimitLock = new();
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
@@ -67,54 +86,127 @@
 
     private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
 
+    protected override void OnInitialized()
+    {
+        _formLoadTime = DateTime.UtcNow;
+    }
+
+    private bool IsRateLimited(string ipAddress)
+    {
+        lock (_rateLimitLock)
+        {
+            if (!_registrationAttempts.ContainsKey(ipAddress))
+                _registrationAttempts[ipAddress] = new Queue<DateTime>();
+
+            var queue = _registrationAttempts[ipAddress];
+            var cutoff = DateTime.UtcNow.AddMinutes(-15);
+
+            // Remove old attempts
+            while (queue.Count > 0 && queue.Peek() < cutoff)
+                queue.Dequeue();
+
+            if (queue.Count >= 5) // Max 5 attempts per 15 minutes
+                return true;
+
+            queue.Enqueue(DateTime.UtcNow);
+            return false;
+        }
+    }
+
     public async Task RegisterUser(EditContext editContext)
     {
-        var user = CreateUser();
+        _isSubmitting = true;
 
-        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
-        var emailStore = GetEmailStore();
-        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-        var result = await UserManager.CreateAsync(user, Input.Password);
-
-        if (!result.Succeeded)
+        try
         {
-            identityErrors = result.Errors;
-            return;
+            // 1. Honeypot check
+            if (!string.IsNullOrEmpty(Input.HoneypotField))
+            {
+                Logger.LogWarning("Bot detected via honeypot field");
+                await Task.Delay(2000); // Delay to slow down bots
+                return;
+            }
+
+            // // 2. Time-based validation (form filled too quickly)
+            // var timeTaken = DateTime.UtcNow - _formLoadTime;
+            // if (timeTaken.TotalSeconds < 3)
+            // {
+            //     Logger.LogWarning("Suspicious registration - form filled in {Seconds} seconds", timeTaken.TotalSeconds);
+            //     identityErrors = new[] { new IdentityError { Description = "Please slow down and try again." } };
+            //     await Task.Delay(2000);
+            //     return;
+            // }
+
+            // 3. Rate limiting by IP address
+            var httpContext = HttpContextAccessor.HttpContext;
+            var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
+
+            if (IsRateLimited(ipAddress))
+            {
+                Logger.LogWarning("Rate limit exceeded for IP: {IpAddress}", ipAddress);
+                identityErrors = new[] { new IdentityError { Description = "Too many registration attempts. Please try again later." } };
+                return;
+            }
+
+            // 4. Prevent duplicate email registrations
+            var existingUser = await UserManager.FindByEmailAsync(Input.Email);
+            if (existingUser != null)
+            {
+                // Don't reveal that the email exists (security best practice)
+                Logger.LogWarning("Registration attempt with existing email: {Email}", Input.Email);
+                identityErrors = new[] { new IdentityError { Description = "Registration failed. Please try a different email." } };
+                return;
+            }
+
+            // Proceed with normal registration
+            var user = CreateUser();
+            await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+            var emailStore = GetEmailStore();
+            await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+
+            var result = await UserManager.CreateAsync(user, Input.Password);
+
+            if (!result.Succeeded)
+            {
+                identityErrors = result.Errors;
+                return;
+            }
+
+            Logger.LogInformation("User created a new account with password.");
+
+            var userId = await UserManager.GetUserIdAsync(user);
+            var userProfile = new UserProfile
+            {
+                Id = Guid.NewGuid(),
+                IdentityUserId = userId,
+                DisplayName = Input.Email
+            };
+
+            _context.UserProfiles.Add(userProfile);
+            await _context.SaveChangesAsync();
+
+            var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+            code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+            var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+                NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+                new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+
+            await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+            if (UserManager.Options.SignIn.RequireConfirmedAccount)
+            {
+                RedirectManager.RedirectTo(
+                    "Account/RegisterConfirmation",
+                    new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+            }
+
+            await SignInManager.SignInAsync(user, isPersistent: false);
+            RedirectManager.RedirectTo(ReturnUrl);
         }
-
-        Logger.LogInformation("User created a new account with password.");
-
-        var userId = await UserManager.GetUserIdAsync(user);
-
-
-        var userProfile = new UserProfile
+        finally
         {
-            Id = Guid.NewGuid(), // Create a new GUID for the user profile
-            IdentityUserId = userId,
-            DisplayName = Input.Email // You can set a display name based on the user's email or other properties
-        };
-
-        // Save UserProfile to the database
-        _context.UserProfiles.Add(userProfile);
-        await _context.SaveChangesAsync();
-
-        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
-
-        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
-
-        if (UserManager.Options.SignIn.RequireConfirmedAccount)
-        {
-            RedirectManager.RedirectTo(
-                "Account/RegisterConfirmation",
-                new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+            _isSubmitting = false;
         }
-
-        await SignInManager.SignInAsync(user, isPersistent: false);
-        RedirectManager.RedirectTo(ReturnUrl);
     }
 
     private ApplicationUser CreateUser()
@@ -156,5 +248,8 @@
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; } = "";
+
+        // Honeypot field - should remain empty
+        public string HoneypotField { get; set; } = "";
     }
 }

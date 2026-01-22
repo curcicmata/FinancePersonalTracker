@@ -1,0 +1,50 @@
+﻿@inject NavigationManager Navigation
+
+<PageTitle>@Title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@Description" />
+    <meta name="keywords" content="@Keywords" />
+    <meta name="author" content="Finance Personal Tracker" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="@Navigation.Uri" />
+    <meta property="og:title" content="@Title" />
+    <meta property="og:description" content="@Description" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="@Navigation.Uri" />
+    <meta property="twitter:title" content="@Title" />
+    <meta property="twitter:description" content="@Description" />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="@Navigation.Uri" />
+
+    <!-- Structured Data (only on home page) -->
+    @if (IncludeStructuredData)
+    {
+        <script type="application/ld+json">
+            {
+              "@@context": "https://schema.org",
+              "@@type": "WebApplication",
+              "name": "Finance Personal Tracker",
+              "description": "Track and manage your family finances with ease",
+              "applicationCategory": "FinanceApplication",
+              "operatingSystem": "Web Browser",
+              "offers": {
+                "@@type": "Offer",
+                "price": "0",
+                "priceCurrency": "EUR"
+              }
+            }
+        </script>
+    }
+</HeadContent>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Finance Personal Tracker - Manage Family Finances";
+    [Parameter] public string Description { get; set; } = "Track and manage your family finances easily. Monitor expenses, income, and savings with detailed charts and reports.";
+    [Parameter] public string Keywords { get; set; } = "finance tracker, expense tracker, budget app, family finances, personal finance, money management";
+    [Parameter] public bool IncludeStructuredData { get; set; } = false;
+}

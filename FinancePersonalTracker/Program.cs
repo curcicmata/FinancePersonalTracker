@@ -50,12 +50,15 @@ builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("SmtpOp
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, SmtpEmailSender>();
 //builder.Services.AddScoped<IEmailSender<ApplicationUser>, SendGridEmailSender>();
 
-
-
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<IFamilyGroupService, FamilyGroupService>();
 
 builder.Services.AddMudServices();
+
+builder.Services.Configure<IdentityOptions>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = true;
+});
 
 var app = builder.Build();
 

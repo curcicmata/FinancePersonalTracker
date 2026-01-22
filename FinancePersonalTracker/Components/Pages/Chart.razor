@@ -5,14 +5,13 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IExpenseService ExpenseService
 
-<h3>Chart</h3>
+<h3>Financial Overview</h3>
 
-<MudPaper Class="p-4">
+<MudPaper Class="pa-4">
     <MudGrid>
-        <MudItem xs="2" sm="2">
+        <MudItem xs="12" sm="4" md="3">
             <MudSelect T="int" Label="Select Year" Dense="true" Variant="Variant.Filled"
                        @bind-Value="SelectedYear"
-                       Style="width: 400px;"
                        Class="mb-4">
                 @foreach (var year in _years)
                 {
@@ -22,42 +21,140 @@
         </MudItem>
     </MudGrid>
 
-    <div Style="width: 100%; overflow-x: auto;">
-        <MudChart ChartType="ChartType.Bar"
-                  ChartSeries="@_series"
-                  XAxisLabels="@_xAxisLabels"
-                  Width="1200px"
-                  Height="550px"
-                  ChartOptions="_chartOptions"
-                  AxisChartOptions="_axisChartOptions" />
-    </div>
-</MudPaper>
-<br />
-<MudPaper>
-    <MudGrid>
-        <MudItem xs="12">
-            <MudText>
-                <b>Salary together in @SelectedYear. year:</b> @totalSalaryTogether
-            </MudText>
+    <!-- Summary Cards -->
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard>
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Total Income</MudText>
+                    <MudText Typo="Typo.h5" Color="Color.Success">€@totalSalaryTogether?.ToString("N2")</MudText>
+                </MudCardContent>
+            </MudCard>
         </MudItem>
-        <MudItem xs="12">
-            <MudText>
-                <b>Expenses together in @SelectedYear. year:</b> @totalExpensesTogether
-            </MudText>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard>
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Total Expenses</MudText>
+                    <MudText Typo="Typo.h5" Color="Color.Error">€@totalExpensesTogether?.ToString("N2")</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard>
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Net Savings</MudText>
+                    <MudText Typo="Typo.h5" Color="@(netSavings >= 0 ? Color.Success : Color.Error)">
+                        €@netSavings?.ToString("N2")
+                    </MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard>
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Savings Rate</MudText>
+                    <MudText Typo="Typo.h5" Color="@(savingsRate >= 0 ? Color.Success : Color.Error)">
+                        @savingsRate?.ToString("N1")%
+                    </MudText>
+                </MudCardContent>
+            </MudCard>
         </MudItem>
     </MudGrid>
+
+    <!-- Chart Tabs -->
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+        <MudTabPanel Text="Monthly Overview">
+            <div style="width: 100%; overflow-x: auto;">
+                <MudChart ChartType="ChartType.Line"
+                          ChartSeries="@_overviewSeries"
+                          XAxisLabels="@_xAxisLabels"
+                          Width="100%"
+                          Height="400px"
+                          ChartOptions="_lineChartOptions" />
+            </div>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Income vs Expenses">
+            <div style="width: 100%; overflow-x: auto;">
+                <MudChart ChartType="ChartType.Bar"
+                          ChartSeries="@_comparisonSeries"
+                          XAxisLabels="@_xAxisLabels"
+                          Width="100%"
+                          Height="400px"
+                          ChartOptions="_barChartOptions" />
+            </div>
+        </MudTabPanel>
+
+        @if (_hasMultipleUsers)
+        {
+            <MudTabPanel Text="By User">
+                <div style="width: 100%; overflow-x: auto;">
+                    <MudChart ChartType="ChartType.StackedBar"
+                              ChartSeries="@_userSeries"
+                              XAxisLabels="@_xAxisLabels"
+                              Width="100%"
+                              Height="400px"
+                              ChartOptions="_stackedBarChartOptions" />
+                </div>
+            </MudTabPanel>
+        }
+
+        <MudTabPanel Text="Monthly Breakdown">
+            <MudTable Items="@_monthlyData" Hover="true" Striped="true" Dense="true">
+                <HeaderContent>
+                    <MudTh>Month</MudTh>
+                    <MudTh Style="text-align: right;">Income</MudTh>
+                    <MudTh Style="text-align: right;">Expenses</MudTh>
+                    <MudTh Style="text-align: right;">Net</MudTh>
+                    <MudTh Style="text-align: right;">Savings Rate</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Month</MudTd>
+                    <MudTd Style="text-align: right; color: green;">€@context.Income.ToString("N2")</MudTd>
+                    <MudTd Style="text-align: right; color: red;">€@context.Expenses.ToString("N2")</MudTd>
+                    <MudTd Style="text-align: right;" Class="@(context.Net >= 0 ? "mud-success-text" : "mud-error-text")">
+                        €@context.Net.ToString("N2")
+                    </MudTd>
+                    <MudTd Style="text-align: right;" Class="@(context.SavingsRate >= 0 ? "mud-success-text" : "mud-error-text")">
+                        @context.SavingsRate.ToString("N1")%
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudTabPanel>
+    </MudTabs>
 </MudPaper>
 
 @code {
-    // private int _selectedYear = DateTime.Now.Year;
-    private List<int> _years = Enumerable.Range(2020, 10).ToList(); // Example: 2020-2025
+    private List<int> _years = Enumerable.Range(2020, DateTime.Now.Year - 2019).ToList();
     private double? totalExpensesTogether;
     private double? totalSalaryTogether;
+    private double? netSavings;
+    private double? savingsRate;
+    private bool _hasMultipleUsers;
 
-    private AxisChartOptions _axisChartOptions = new AxisChartOptions();
-    private ChartOptions _chartOptions = new();
-    private List<ChartSeries> _series = new();
+    private List<ChartSeries> _overviewSeries = new();
+    private List<ChartSeries> _comparisonSeries = new();
+    private List<ChartSeries> _userSeries = new();
+    private List<MonthlyData> _monthlyData = new();
+
     private string[] _xAxisLabels = CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedMonthNames.Take(12).ToArray();
+
+    private ChartOptions _lineChartOptions = new ChartOptions
+    {
+        InterpolationOption = InterpolationOption.NaturalSpline,
+        YAxisTicks = 10,
+        LineStrokeWidth = 3.0
+    };
+
+    private ChartOptions _barChartOptions = new ChartOptions
+    {
+        YAxisTicks = 10
+    };
+
+    private ChartOptions _stackedBarChartOptions = new ChartOptions
+    {
+        YAxisTicks = 10
+    };
 
     private int _selectedYear = DateTime.Now.Year;
     private int SelectedYear
@@ -73,34 +170,10 @@
         }
     }
 
-
     protected override async Task OnInitializedAsync()
     {
         await LoadChartData(_selectedYear);
-
-        _axisChartOptions = new AxisChartOptions()
-        {
-            StackedBarWidthRatio = 50,
-            MatchBoundsToSize = true,
-        };
-
-        _chartOptions = new ChartOptions()
-        {
-            XAxisLines = true,
-            YAxisTicks = 20,
-            MaxNumYAxisTicks = 20,
-            // ChartPalette = ["#009933", "#ff6666", "#00aaff", "#ff6600", "#fc0314", "#2803fc"]
-
-        };
-
     }
-
-    private async void OnYearChanged()
-    {
-        var newYear = _selectedYear;
-        await LoadChartData(newYear);
-    }
-
 
     private async Task LoadChartData(int year)
     {
@@ -110,28 +183,88 @@
 
         var data = await ExpenseService.GetMonthlyTotalsForFamilyAsync(identityUserId!, year);
 
+        // Calculate totals
         totalSalaryTogether = data.TotalSalaries.Sum();
         totalExpensesTogether = data.TotalExpenses.Sum();
+        netSavings = totalSalaryTogether - totalExpensesTogether;
+        savingsRate = totalSalaryTogether > 0 ? (netSavings / totalSalaryTogether) * 100 : 0;
 
-        _series = new List<ChartSeries>();
+        _hasMultipleUsers = data.ExpensesByUser.Count > 1 || data.SalariesByUser.Count > 1;
 
-        foreach (var kvp in data.ExpensesByUser)
+        // Overview Series (Line Chart - Income, Expenses, Net)
+        _overviewSeries = new List<ChartSeries>
         {
-            _series.Add(new ChartSeries { Name = $"{kvp.Key} - Expenses", Data = kvp.Value });
-        }
+            new ChartSeries
+            {
+                Name = "Income",
+                Data = data.TotalSalaries.Select(x => (double)x).ToArray()
+            },
+            new ChartSeries
+            {
+                Name = "Expenses",
+                Data = data.TotalExpenses.Select(x => (double)x).ToArray()
+            },
+            new ChartSeries
+            {
+                Name = "Net Savings",
+                Data = data.TotalSalaries.Zip(data.TotalExpenses, (s, e) => (double)(s - e)).ToArray()
+            }
+        };
 
+        // Comparison Series (Bar Chart)
+        _comparisonSeries = new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Income",
+                Data = data.TotalSalaries.Select(x => (double)x).ToArray()
+            },
+            new ChartSeries
+            {
+                Name = "Expenses",
+                Data = data.TotalExpenses.Select(x => (double)x).ToArray()
+            }
+        };
+
+        // User Series (Stacked Bar Chart)
+        _userSeries = new List<ChartSeries>();
         foreach (var kvp in data.SalariesByUser)
         {
-            _series.Add(new ChartSeries { Name = $"{kvp.Key} - Salaries", Data = kvp.Value });
+            _userSeries.Add(new ChartSeries { Name = $"{kvp.Key} (Income)", Data = kvp.Value });
+        }
+        foreach (var kvp in data.ExpensesByUser)
+        {
+            _userSeries.Add(new ChartSeries { Name = $"{kvp.Key} (Expenses)", Data = kvp.Value.Select(x => -x).ToArray() });
         }
 
-        if (data.ExpensesByUser.Count > 1 || data.SalariesByUser.Count > 1)
+        // Monthly breakdown table data
+        _monthlyData = new List<MonthlyData>();
+        for (int i = 0; i < 12; i++)
         {
-        // Optional: Add family totals
-        _series.Add(new ChartSeries { Name = "Total Expenses", Data = data.TotalExpenses });
-        _series.Add(new ChartSeries { Name = "Total Salaries", Data = data.TotalSalaries });            
+            var income = data.TotalSalaries[i];
+            var expenses = data.TotalExpenses[i];
+            var net = income - expenses;
+            var rate = income > 0 ? (net / income) * 100 : 0;
+
+            _monthlyData.Add(new MonthlyData
+            {
+                Month = _xAxisLabels[i],
+                Income = income,
+                Expenses = expenses,
+                Net = net,
+                SavingsRate = rate
+            });
         }
 
         StateHasChanged();
+    }
+
+    private class MonthlyData
+    {
+        public string Month { get; set; } = "";
+        public double Income { get; set; }
+        public double Expenses { get; set; }
+        public double Net { get; set; }
+        public double SavingsRate { get; set; }
     }
 }

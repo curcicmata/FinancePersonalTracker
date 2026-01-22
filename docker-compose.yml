@@ -73,6 +73,14 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=FinancePersonalTracker;Username=appuser;Password=StrongAppPassword!
+      DOTNET_GC_SERVER: "1"
+      DOTNET_GC_CONCURRENT: "1"
+      DOTNET_GC_HEAP_HARD_LIMIT: "1500000000"
+    deploy:
+      resources:
+        limits:
+          memory: 1.5g
+    mem_limit: 1.5g
     depends_on:
       - db
     restart: unless-stopped

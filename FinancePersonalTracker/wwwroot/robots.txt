@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /Account/
+Disallow: /family-expenses
+Disallow: /chart
+Disallow: /family
+
+Sitemap: https://personalfinancetracker.biz/sitemap.xml
