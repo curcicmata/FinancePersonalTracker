@@ -1,0 +1,65 @@
+﻿@using FinancePersonalTracker.Components.Pages
+@using MudBlazor
+
+@if (ShowBanner)
+{
+    <MudPaper Elevation="8"
+              Class="mud-cookie-banner pa-4"
+              Square="true">
+
+        <MudStack Row="true" AlignItems="AlignItems.Center" JustifyContent="space-between" Spacing="3">
+            <MudText Typo="Typo.body2">
+                We use cookies to improve analytics and user experience.
+            </MudText>
+
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Default"
+                           OnClick="Decline">
+                    Decline
+                </MudButton>
+
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="Accept">
+                    Accept
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+}
+
+@inject IJSRuntime JS
+
+@code {
+    bool ShowBanner;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var consent = await JS.InvokeAsync<string>("cookieConsent.check");
+
+        if (string.IsNullOrEmpty(consent))
+        {
+            ShowBanner = true;
+            StateHasChanged();
+        }
+        else if (consent == "granted")
+        {
+            await JS.InvokeVoidAsync("cookieConsent.accept");
+        }
+    }
+
+    async Task Accept()
+    {
+        await JS.InvokeVoidAsync("cookieConsent.accept");
+        ShowBanner = false;
+    }
+
+    async Task Decline()
+    {
+        await JS.InvokeVoidAsync("cookieConsent.decline");
+        ShowBanner = false;
+    }
+}
