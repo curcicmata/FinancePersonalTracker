@@ -26,6 +26,16 @@ namespace FinancePersonalTracker.Services
             }
         }
 
+        public async Task UpdateExpenseAsync(Guid expenseId, decimal amount)
+        {
+            var expense = await context.Expenses.FindAsync(expenseId);
+            if (expense != null)
+            {
+                expense.Amount = amount;
+                await context.SaveChangesAsync();
+            }
+        }
+
         public async Task<List<UserProfile>> GetAllUserProfilesWithExpensesAsync(string userProfileId)
         {
             return await context.UserProfiles

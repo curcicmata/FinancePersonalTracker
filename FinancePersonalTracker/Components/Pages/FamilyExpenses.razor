@@ -1,6 +1,8 @@
 ﻿@page "/family-expenses"
+
 @using FinancePersonalTracker.Interface
 @using FinancePersonalTracker.Models
+@using System.Globalization
 @inject IExpenseService ExpenseService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IDialogService DialogService
@@ -27,6 +29,7 @@
         Immediate="true"
         OnKeyDown="HandleKeyDown"
         TextUpdateSuppression="false"
+        Culture="@(new System.Globalization.CultureInfo("de-DE"))"
         Class="mb-4" />
     </MudItem>
     <MudItem xs="4">
@@ -54,15 +57,18 @@ else
         <MudCard Class="mt-4">
             <MudCardContent>
                 <MudText Typo="Typo.h6">@user.DisplayName</MudText>
-                <MudTable Items="@user.Expenses.Where(x => x.Date.Year == _yearMonth?.Year && x.Date.Month == _yearMonth?.Month).OrderByDescending(e => e.Date)">
+                <MudTable
+                    Items="@user.Expenses.Where(x => x.Date.Year == _yearMonth?.Year && x.Date.Month == _yearMonth?.Month).OrderByDescending(e => e.Date)">
                     <HeaderContent>
                         <MudTh>Amount</MudTh>
-                        <MudTh>Date</MudTh>
+                        <MudTh>Date (month/year)</MudTh>
                         <MudTh></MudTh>
                     </HeaderContent>
                     <RowTemplate>
-                        <MudTd Style="@(context.ExpenseType == 0 ? "color: black; background-color: white;" : "color: blue; background-color: white; font-weight: bold;")">@context.Amount</MudTd>
-                        <MudTd>@context.Date.ToShortDateString()</MudTd>
+                        <MudTd Style="@(context.ExpenseType == 0 ? "color: black; background-color: white;" : "color: blue; background-color: white; font-weight: bold;")">
+                            @context.Amount.ToString("0.00", new CultureInfo("de-DE"))
+                        </MudTd>
+                        <MudTd>@context.Date.ToString("MM/yyyy")</MudTd>
                         <MudTd>
                             @if (context.UserProfileId == CurrentUserProfileId)
                             {
@@ -78,6 +84,7 @@ else
                 </MudText>
             </MudCardContent>
         </MudCard>
+
     }
 
 }
@@ -95,11 +102,15 @@ else
     private ExpenseType newExpenseType = ExpenseType.Expense;
     public decimal? netIncome { get; set; }
 
-
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && newExpenseAmount > 0 && CurrentUserProfileId != null)
+        if (e.Key == "Enter" && CurrentUserProfileId != null)
         {
+            if (!newExpenseAmount.HasValue)
+            {
+                return;
+            }
+
             var newExpense = new Expense
                 {
                     Id = Guid.NewGuid(),
@@ -110,6 +121,8 @@ else
                 };
 
             await ExpenseService.AddExpenseAsync(newExpense);
+
+            Snackbar.Add("Saved", Severity.Success);
 
             newExpenseAmount = null;
 
@@ -147,6 +160,9 @@ else
     private async Task DeleteExpense(Guid expenseId)
     {
         await ExpenseService.DeleteExpenseAsync(expenseId);
+        Snackbar.Add("Deleted", Severity.Warning);
+
+
         await OnInitializedAsync();
     }
 
@@ -183,7 +199,6 @@ else
         if (!result.Canceled)
         {
             Snackbar.Add("Family send!", Severity.Success);
-
         }
     }
 }
