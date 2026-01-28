@@ -24,21 +24,12 @@
     <!-- Structured Data (only on home page) -->
     @if (IncludeStructuredData)
     {
-        <script type="application/ld+json">
-            {
-              "@@context": "https://schema.org",
-              "@@type": "WebApplication",
-              "name": "Finance Personal Tracker",
-              "description": "Track and manage your family finances with ease",
-              "applicationCategory": "FinanceApplication",
-              "operatingSystem": "Web Browser",
-              "offers": {
-                "@@type": "Offer",
-                "price": "0",
-                "priceCurrency": "EUR"
-              }
-            }
-        </script>
+        @if (IncludeStructuredData)
+        {
+            <script type="application/ld+json">
+                @JsonLdMarkup
+            </script>
+        }
     }
 </HeadContent>
 
@@ -47,4 +38,20 @@
     [Parameter] public string Description { get; set; } = "Track and manage your family finances easily. Monitor expenses, income, and savings with detailed charts and reports.";
     [Parameter] public string Keywords { get; set; } = "finance tracker, expense tracker, budget app, family finances, personal finance, money management";
     [Parameter] public bool IncludeStructuredData { get; set; } = false;
+
+    MarkupString JsonLdMarkup => new MarkupString(@"
+    {
+      ""@context"": ""https://schema.org"",
+      ""@type"": ""WebApplication"",
+      ""name"": ""Finance Personal Tracker"",
+      ""description"": ""Track and manage your family finances with ease. One user or multiple users can join inside family for shared expenses and incomes. Simple tracking - only incomes and expenses."",
+      ""applicationCategory"": ""FinanceApplication"",
+      ""operatingSystem"": ""Web Browser"",
+      ""offers"": {
+        ""@type"": ""Offer"",
+        ""price"": ""0"",
+        ""priceCurrency"": ""EUR""
+      }
+    }
+    ");
 }

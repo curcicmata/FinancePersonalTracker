@@ -39,8 +39,6 @@
 # volumes:
 #   pgdata:
 
-version: '3.9'
-
 services:
   nginx:
     image: nginx:alpine
