@@ -9,7 +9,7 @@
 @inject ISnackbar Snackbar
 
 
-<MudItem xs="1">
+@* <MudItem xs="1">
     <MudDatePicker Label="Month"
     @bind-Date="_yearMonth"
     OpenTo="OpenTo.Year"
@@ -87,7 +87,264 @@ else
 
     }
 
-}
+} *@
+
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+
+    @* Header Section with Month Picker *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4 rounded-lg">
+        <MudGrid Spacing="2" Justify="Justify.Center">
+            <MudItem xs="12" sm="6" md="4">
+                <MudDatePicker Label="Select Month"
+                               @bind-Date="_yearMonth"
+                               OpenTo="OpenTo.Year"
+                               FixDay="1"
+                               DateFormat="MM/yyyy"
+                               Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               AdornmentIcon="@Icons.Material.Filled.CalendarMonth"
+                               Adornment="Adornment.Start"
+                               Class="rounded-lg" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @* Add Expense Section *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4 rounded-lg">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" />
+            Add New Entry
+        </MudText>
+
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="newExpenseAmount"
+                              Label="Amount"
+                              Placeholder="0.00"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                              Immediate="true"
+                              OnKeyDown="HandleKeyDown"
+                              TextUpdateSuppression="false"
+                              Culture="@(new System.Globalization.CultureInfo("de-DE"))"
+                              FullWidth="true" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudRadioGroup @bind-Value="newExpenseType" Class="d-flex align-center" Style="height: 100%;">
+                    <MudRadio Value="ExpenseType.Expense"
+                              Color="Color.Error"
+                              Dense="true">
+                        <MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.TrendingDown" Size="Size.Small" Class="mr-1" />
+                            Expense
+                        </MudText>
+                    </MudRadio>
+                    <MudRadio Value="ExpenseType.Salary"
+                              Color="Color.Success"
+                              Dense="true"
+                              Class="ml-4">
+                        <MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Class="mr-1" />
+                            Salary
+                        </MudText>
+                    </MudRadio>
+                </MudRadioGroup>
+            </MudItem>
+        </MudGrid>
+
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+            Press Enter to add the entry
+        </MudText>
+    </MudPaper>
+
+    @* Family Group Button *@
+    <MudButton OnClick="OpenCreateFamilyDialog"
+               Color="Color.Primary"
+               Variant="Variant.Filled"
+               StartIcon="@Icons.Material.Filled.Group"
+               FullWidth="true"
+               Size="Size.Large"
+               Class="mb-4 rounded-lg">
+        Create Family Group
+    </MudButton>
+
+    @* Loading State *@
+    @if (IsLoading)
+    {
+        <MudPaper Class="pa-8 text-center rounded-lg" Elevation="0">
+            <MudProgressCircular Indeterminate
+                                 Color="Color.Primary"
+                                 Size="Size.Large" />
+            <MudText Typo="Typo.body1" Class="mt-3">Loading...</MudText>
+        </MudPaper>
+    }
+    else
+    {
+        @* User Expense Cards *@
+        @foreach (var user in userProfileList)
+        {
+            var userExpenses = user.Expenses
+            .Where(x => x.Date.Year == _yearMonth?.Year && x.Date.Month == _yearMonth?.Month)
+            .OrderByDescending(e => e.Date)
+            .ToList();
+
+            <MudCard Elevation="3" Class="mb-4 rounded-lg">
+                <MudCardHeader Class="pb-2">
+                    <CardHeaderAvatar>
+                        <MudAvatar Color="Color.Primary" Size="Size.Large">
+                            @user.DisplayName?.Substring(0, Math.Min(2, user.DisplayName.Length)).ToUpper()
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@user.DisplayName</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @userExpenses.Count @(userExpenses.Count == 1 ? "entry" : "entries")
+                        </MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+
+                <MudCardContent Class="pa-0">
+                    @if (userExpenses.Any())
+                    {
+                        @* Desktop Table View *@
+                        <MudHidden Breakpoint="Breakpoint.SmAndDown">
+                            <MudTable Items="@userExpenses"
+                                      Hover="true"
+                                      Dense="true"
+                                      Striped="true">
+                                <HeaderContent>
+                                    <MudTh>Amount</MudTh>
+                                    <MudTh>Date</MudTh>
+                                    <MudTh>Type</MudTh>
+                                    <MudTh></MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd>
+                                        <MudText Typo="Typo.body2"
+                                                 Style="@GetAmountStyle(context.ExpenseType)">
+                                            @GetAmountPrefix(context.ExpenseType)@context.Amount.ToString("N2", new CultureInfo("de-DE"))
+                                        </MudText>
+                                    </MudTd>
+                                    <MudTd>
+                                        <MudText Typo="Typo.body2">
+                                            @context.Date.ToString("MM/yyyy")
+                                        </MudText>
+                                    </MudTd>
+                                    <MudTd>
+                                        <MudChip T="string"
+                                                 Size="Size.Small"
+                                                 Color="@(context.ExpenseType == ExpenseType.Salary ? Color.Success : Color.Error)"
+                                                 Variant="Variant.Filled">
+                                            @context.ExpenseType
+                                        </MudChip>
+                                    </MudTd>
+                                    <MudTd>
+                                        @if (context.UserProfileId == CurrentUserProfileId)
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                           Color="Color.Error"
+                                                           Size="Size.Small"
+                                                           OnClick="@(() => DeleteExpense(context.Id))" />
+                                        }
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </MudHidden>
+
+                        @* Mobile Card View *@
+                        <MudHidden Breakpoint="Breakpoint.MdAndUp">
+                            <MudList T="string" Dense="true">
+                                @foreach (var expense in userExpenses)
+                                {
+                                    <MudListItem Class="px-4 py-3">
+                                        <MudGrid Spacing="1">
+                                            <MudItem xs="8">
+                                                <MudText Typo="Typo.body1"
+                                                         Style="@GetAmountStyle(expense.ExpenseType)">
+                                                    @GetAmountPrefix(expense.ExpenseType)@expense.Amount.ToString("N2", new CultureInfo("de-DE"))
+                                                </MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @expense.Date.ToString("dd.MM.yyyy")
+                                                </MudText>
+                                            </MudItem>
+                                            <MudItem xs="4" Class="d-flex justify-end align-center">
+                                                <MudChip T="string"
+                                                         Size="Size.Small"
+                                                         Color="@(expense.ExpenseType == ExpenseType.Salary ? Color.Success : Color.Error)"
+                                                         Variant="Variant.Text">
+                                                    @(expense.ExpenseType == ExpenseType.Salary ? "+" : "-")
+                                                </MudChip>
+                                                @if (expense.UserProfileId == CurrentUserProfileId)
+                                                {
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                   Color="Color.Error"
+                                                                   Size="Size.Small"
+                                                                   OnClick="@(() => DeleteExpense(expense.Id))" />
+                                                }
+                                            </MudItem>
+                                        </MudGrid>
+                                    </MudListItem>
+                                    <MudDivider />
+                                }
+                            </MudList>
+                        </MudHidden>
+                    }
+                    else
+                    {
+                        <MudPaper Class="pa-6 text-center" Elevation="0">
+                            <MudIcon Icon="@Icons.Material.Filled.Receipt"
+                                     Size="Size.Large"
+                                     Color="Color.Secondary" />
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                                No entries for this month
+                            </MudText>
+                        </MudPaper>
+                    }
+                </MudCardContent>
+
+                <MudCardActions Class="px-4 py-3">
+                    <MudPaper Class="pa-3 flex-grow-1 rounded-lg"
+                              Elevation="0"
+                              Style="@GetNetIncomeBackgroundStyle(netIncome)">
+                        <MudGrid Spacing="0">
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Net Balance
+                                </MudText>
+                            </MudItem>
+                            <MudItem xs="6" Class="text-right">
+                                <MudText Typo="Typo.h6"
+                                         Style="@GetNetIncomeStyle(netIncome)">
+                                    @netIncome €
+                                </MudText>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                </MudCardActions>
+            </MudCard>
+        }
+
+        @if (!userProfileList.Any())
+        {
+            <MudPaper Class="pa-8 text-center rounded-lg" Elevation="2">
+                <MudIcon Icon="@Icons.Material.Filled.Group"
+                         Size="Size.Large"
+                         Color="Color.Secondary" />
+                <MudText Typo="Typo.h6" Class="mt-3">No Users Found</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Create a family group to get started
+                </MudText>
+            </MudPaper>
+        }
+    }
+
+</MudContainer>
+
+
+
 
 
 @code {
@@ -201,4 +458,41 @@ else
             Snackbar.Add("Family send!", Severity.Success);
         }
     }
+
+
+
+
+
+
+    private string GetAmountStyle(ExpenseType type)
+    {
+        return type == ExpenseType.Salary
+            ? "color: var(--mud-palette-success); font-weight: 600;"
+            : "color: var(--mud-palette-error); font-weight: 600;";
+    }
+
+    private string GetAmountPrefix(ExpenseType type)
+    {
+        return type == ExpenseType.Salary ? "+ " : "- ";
+    }
+
+    private string GetNetIncomeStyle(decimal? income)
+    {
+        return income < 0
+            ? "color: var(--mud-palette-error); font-weight: bold;"
+            : "color: var(--mud-palette-success); font-weight: bold;";
+    }
+
+    private string GetNetIncomeBackgroundStyle(decimal? income)
+    {
+        return income < 0
+            ? "background-color: rgba(244, 67, 54, 0.08);"
+            : "background-color: rgba(76, 175, 80, 0.08);";
+    }
+
+
+
+
+
+
 }

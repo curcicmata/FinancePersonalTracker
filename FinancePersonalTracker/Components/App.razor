@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 
-<head>
+@* <head>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){ dataLayer.push(arguments); }
@@ -39,6 +39,48 @@
     </script>
     <script src="js/cookieConsent.js"></script>
     <link href="css/site.css" rel="stylesheet" />
+</head> *@
+<head>
+    <!-- Consent Mode MUST be set before GA loads -->
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){ dataLayer.push(arguments); }
+
+        gtag('consent', 'default', {
+            ad_storage: 'denied',
+            analytics_storage: 'denied'
+        });
+    </script>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="language" content="English" />
+    <base href="/" />
+    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["FinancePersonalTracker.styles.css"]" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+    <ImportMap />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <HeadOutlet @rendermode="PageRenderMode" />
+
+    <!-- Load cookie consent helper before GA -->
+    <script src="js/cookieConsent.js"></script>
+    <link href="css/site.css" rel="stylesheet" />
+
+    <!-- Google tag (gtag.js) - loads AFTER consent is set -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6CXQDHHCTK"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-6CXQDHHCTK'); // Use your actual ID, not 'G-aaaaa'
+    </script>
 </head>
 
 <body>
