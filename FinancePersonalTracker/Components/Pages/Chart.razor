@@ -88,14 +88,26 @@
         @if (_hasMultipleUsers)
         {
             <MudTabPanel Text="By User">
-                <div style="width: 100%; overflow-x: auto;">
-                    <MudChart ChartType="ChartType.StackedBar"
-                              ChartSeries="@_userSeries"
-                              XAxisLabels="@_xAxisLabels"
-                              Width="100%"
-                              Height="400px"
-                              ChartOptions="_stackedBarChartOptions" />
-                </div>
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.h6" Class="mb-2">Income by User</MudText>
+                        <MudChart ChartType="ChartType.Bar"
+                                  ChartSeries="@_userIncomeSeries"
+                                  XAxisLabels="@_xAxisLabels"
+                                  Width="100%"
+                                  Height="350px"
+                                  ChartOptions="_userChartOptions" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.h6" Class="mb-2">Expenses by User</MudText>
+                        <MudChart ChartType="ChartType.Bar"
+                                  ChartSeries="@_userExpenseSeries"
+                                  XAxisLabels="@_xAxisLabels"
+                                  Width="100%"
+                                  Height="350px"
+                                  ChartOptions="_userChartOptions" />
+                    </MudItem>
+                </MudGrid>
             </MudTabPanel>
         }
 
@@ -134,7 +146,8 @@
 
     private List<ChartSeries> _overviewSeries = new();
     private List<ChartSeries> _comparisonSeries = new();
-    private List<ChartSeries> _userSeries = new();
+    private List<ChartSeries> _userIncomeSeries = new();
+    private List<ChartSeries> _userExpenseSeries = new();
     private List<MonthlyData> _monthlyData = new();
 
     private string[] _xAxisLabels = CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedMonthNames.Take(12).ToArray();
@@ -151,7 +164,7 @@
         YAxisTicks = 10
     };
 
-    private ChartOptions _stackedBarChartOptions = new ChartOptions
+    private ChartOptions _userChartOptions = new ChartOptions
     {
         YAxisTicks = 10
     };
@@ -197,44 +210,54 @@
             new ChartSeries
             {
                 Name = "Income",
-                Data = data.TotalSalaries.Select(x => (double)x).ToArray()
+                Data = data.TotalSalaries.Select(x => Math.Round((double)x, 2)).ToArray()
             },
             new ChartSeries
             {
                 Name = "Expenses",
-                Data = data.TotalExpenses.Select(x => (double)x).ToArray()
+                Data = data.TotalExpenses.Select(x => Math.Round((double)x, 2)).ToArray()
             },
             new ChartSeries
             {
                 Name = "Net Savings",
-                Data = data.TotalSalaries.Zip(data.TotalExpenses, (s, e) => (double)(s - e)).ToArray()
+                Data = data.TotalSalaries.Zip(data.TotalExpenses, (s, e) => Math.Round((double)(s - e), 2)).ToArray()
             }
         };
 
-        // Comparison Series (Bar Chart)
+        // Comparison Series (Bar Chart) - FIXED: Round to 2 decimals
         _comparisonSeries = new List<ChartSeries>
         {
             new ChartSeries
             {
                 Name = "Income",
-                Data = data.TotalSalaries.Select(x => (double)x).ToArray()
+                Data = data.TotalSalaries.Select(x => Math.Round((double)x, 2)).ToArray()
             },
             new ChartSeries
             {
                 Name = "Expenses",
-                Data = data.TotalExpenses.Select(x => (double)x).ToArray()
+                Data = data.TotalExpenses.Select(x => Math.Round((double)x, 2)).ToArray()
             }
         };
 
-        // User Series (Stacked Bar Chart)
-        _userSeries = new List<ChartSeries>();
+        // User Series (Separate charts for Income and Expenses) - FIXED: Round to 2 decimals
+        _userIncomeSeries = new List<ChartSeries>();
         foreach (var kvp in data.SalariesByUser)
         {
-            _userSeries.Add(new ChartSeries { Name = $"{kvp.Key} (Income)", Data = kvp.Value });
+            _userIncomeSeries.Add(new ChartSeries
+            {
+                Name = kvp.Key,
+                Data = kvp.Value.Select(x => Math.Round((double)x, 2)).ToArray()
+            });
         }
+
+        _userExpenseSeries = new List<ChartSeries>();
         foreach (var kvp in data.ExpensesByUser)
         {
-            _userSeries.Add(new ChartSeries { Name = $"{kvp.Key} (Expenses)", Data = kvp.Value.Select(x => -x).ToArray() });
+            _userExpenseSeries.Add(new ChartSeries
+            {
+                Name = kvp.Key,
+                Data = kvp.Value.Select(x => Math.Round((double)x, 2)).ToArray()
+            });
         }
 
         // Monthly breakdown table data
