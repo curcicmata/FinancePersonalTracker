@@ -119,16 +119,15 @@ else
 
         <MudGrid Spacing="2">
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="newExpenseAmount"
+                <MudTextField @bind-Value="newExpenseAmountText"
                               Label="Amount"
-                              Placeholder="0.00"
+                              Placeholder="0,00"
                               Variant="Variant.Outlined"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Filled.AttachMoney"
                               Immediate="true"
                               OnKeyDown="HandleKeyDown"
                               TextUpdateSuppression="false"
-                              Culture="@(new System.Globalization.CultureInfo("de-DE"))"
                               FullWidth="true" />
             </MudItem>
 
@@ -353,7 +352,7 @@ else
     private Guid? CurrentUserProfileId;
     private bool IsLoading = true;
     private List<UserProfile>? userProfileList = new();
-    private decimal? newExpenseAmount = 0;
+    private string newExpenseAmountText = "";
     public List<Expense> Expenses { get; set; } = new();
     private DateTime? _yearMonth { get; set; } = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
     private ExpenseType newExpenseType = ExpenseType.Expense;
@@ -363,16 +362,16 @@ else
     {
         if (e.Key == "Enter" && CurrentUserProfileId != null)
         {
-            if (!newExpenseAmount.HasValue)
-            {
+            var normalized = newExpenseAmountText.Replace('.', ',');
+            if (!decimal.TryParse(normalized, System.Globalization.NumberStyles.Any,
+                    new System.Globalization.CultureInfo("de-DE"), out var parsedAmount))
                 return;
-            }
 
             var newExpense = new Expense
                 {
                     Id = Guid.NewGuid(),
                     UserProfileId = CurrentUserProfileId.Value,
-                    Amount = newExpenseAmount.Value,
+                    Amount = parsedAmount,
                     ExpenseType = newExpenseType,
                     Date = new DateTime(_yearMonth!.Value.Year, _yearMonth.Value.Month, 1, 0, 0, 0, DateTimeKind.Utc)
                 };
@@ -381,7 +380,7 @@ else
 
             Snackbar.Add("Saved", Severity.Success);
 
-            newExpenseAmount = null;
+            newExpenseAmountText = "";
 
             await InvokeAsync(StateHasChanged);
             await Task.Delay(50);

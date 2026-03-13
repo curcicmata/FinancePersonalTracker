@@ -1,28 +1,127 @@
-﻿@page "/"
+@page "/"
 
 <SeoHead Title="Personal Finance Tracker - Manage Your Family Budget"
          Description="Free online finance tracker for families. Track expenses, monitor income, and visualize your savings with interactive charts."
          Keywords="finance tracker, family budget, expense tracking, personal finance, money management" />
 
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
 
-<h1>Hello, Annći Bananći! :)</h1>
+    @* Hero Section *@
+    <MudPaper Elevation="0"
+              Class="rounded-xl pa-8 mb-8 text-center"
+              Style="background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%); color: white;">
+        <MudText Typo="Typo.h3" Style="font-weight: 700; color: white;" Class="mb-2">
+            Hello, Annći Bananći! 👋
+        </MudText>
+        <MudText Typo="Typo.h6" Style="color: rgba(255,255,255,0.85); font-weight: 400;" Class="mb-4">
+            Your simple personal finance tracker — fast, easy, and built for families.
+        </MudText>
+        <MudText Typo="Typo.body1" Style="color: rgba(255,255,255,0.75); max-width: 560px; margin: 0 auto;">
+            Enter incomes and expenses without the hassle of extra fields.
+            Track your savings through beautiful, interactive charts.
+        </MudText>
+    </MudPaper>
 
-<br />
-<br />
-<p>Your <b>simple</b> personal finance tracker where you can enter your incomes and expenses and track your savings by various charts.</p>
-<p>Just enter your incomes and expenses without all additional data. <b>Fast and easy.</b></p>
-<img src="/img/expenses_example.jpg" alt="Expenses Example" height="482" width="800" />
+    @* Feature Highlights *@
+    <MudGrid Spacing="4" Class="mb-8">
+        <MudItem xs="12" sm="4">
+            <MudPaper Elevation="2" Class="pa-5 rounded-xl text-center" Style="height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Bolt"
+                         Style="color: #1976d2; font-size: 2.5rem;"
+                         Class="mb-3" />
+                <MudText Typo="Typo.subtitle1" Style="font-weight: 600;" Class="mb-1">Fast & Simple</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Just enter an amount and press Enter. No categories, no clutter.
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Elevation="2" Class="pa-5 rounded-xl text-center" Style="height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.BarChart"
+                         Style="color: #1976d2; font-size: 2.5rem;"
+                         Class="mb-3" />
+                <MudText Typo="Typo.subtitle1" Style="font-weight: 600;" Class="mb-1">Visual Charts</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Monthly and yearly overviews with interactive bar and comparison charts.
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Elevation="2" Class="pa-5 rounded-xl text-center" Style="height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Group"
+                         Style="color: #1976d2; font-size: 2.5rem;"
+                         Class="mb-3" />
+                <MudText Typo="Typo.subtitle1" Style="font-weight: 600;" Class="mb-1">Family Sharing</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Multiple users in one family group — see everyone's data in one place.
+                </MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
 
-<br />
-<br />
-<p><b>Track your data</b> through the whole year or on a monthly basis:</p>
-<img src="/img/chart_1.jpg" alt="Monthly overview" height="308" width="900" />
-<img src="img/income_expenses.jpg" alt="Income vs expenses" height="340" width="1000" />
-<br />
-<br />
-<p>Simple <b>monthly breakdown</b> through whole year:</p>
-<img src="/img/monthly_breakdown.jpg" alt="Monthly breakdown" height="406" width="1200" />
-<br />
-<br />
-<p>If you are having multiple users in a same family that <b>share</b> financial data, you can see all that data in a simple chart:</p>
-<img src="/img/by_user.jpg" alt="By user"  height="367" width="1200" />
+    @* Screenshot: Expense Entry *@
+    <MudPaper Elevation="2" Class="rounded-xl pa-6 mb-6">
+        <MudText Typo="Typo.h6" Style="font-weight: 600;" Class="mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" Style="vertical-align: middle;" />
+            Track Your Expenses
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+            Enter incomes and expenses without all the extra data. <strong>Fast and easy.</strong>
+        </MudText>
+        <img src="/img/expenses_example.jpg"
+             alt="Expenses Example"
+             style="width: 100%; max-width: 800px; height: auto; border-radius: 8px; display: block; margin: 0 auto;" />
+    </MudPaper>
+
+    @* Screenshot: Yearly Chart *@
+    <MudPaper Elevation="2" Class="rounded-xl pa-6 mb-6">
+        <MudText Typo="Typo.h6" Style="font-weight: 600;" Class="mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Class="mr-2" Style="vertical-align: middle;" />
+            Yearly & Monthly Overview
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+            Track your data through the whole year or on a monthly basis.
+        </MudText>
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="6">
+                <img src="/img/chart_1.jpg"
+                     alt="Monthly overview chart"
+                     style="width: 100%; height: auto; border-radius: 8px;" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <img src="/img/income_expenses.jpg"
+                     alt="Income vs expenses chart"
+                     style="width: 100%; height: auto; border-radius: 8px;" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @* Screenshot: Monthly Breakdown *@
+    <MudPaper Elevation="2" Class="rounded-xl pa-6 mb-6">
+        <MudText Typo="Typo.h6" Style="font-weight: 600;" Class="mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.PieChart" Class="mr-2" Style="vertical-align: middle;" />
+            Monthly Breakdown
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+            Simple monthly breakdown through the whole year.
+        </MudText>
+        <img src="/img/monthly_breakdown.jpg"
+             alt="Monthly breakdown chart"
+             style="width: 100%; max-width: 1200px; height: auto; border-radius: 8px; display: block; margin: 0 auto;" />
+    </MudPaper>
+
+    @* Screenshot: By User *@
+    <MudPaper Elevation="2" Class="rounded-xl pa-6 mb-6">
+        <MudText Typo="Typo.h6" Style="font-weight: 600;" Class="mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.People" Class="mr-2" Style="vertical-align: middle;" />
+            Family Overview
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+            Multiple users sharing financial data? See it all in one simple chart.
+        </MudText>
+        <img src="/img/by_user.jpg"
+             alt="Expenses by user chart"
+             style="width: 100%; max-width: 1200px; height: auto; border-radius: 8px; display: block; margin: 0 auto;" />
+    </MudPaper>
+
+</MudContainer>

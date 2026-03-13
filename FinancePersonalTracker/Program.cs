@@ -13,6 +13,32 @@ using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load .env file for local development
+if (builder.Environment.IsDevelopment())
+{
+    var envFile = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", ".env"));
+    if (File.Exists(envFile))
+    {
+        var envVars = File.ReadAllLines(envFile)
+            .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("#") && line.Contains('='))
+            .ToDictionary(
+                line => line[..line.IndexOf('=')].Trim(),
+                line => line[(line.IndexOf('=') + 1)..].Trim().Trim('"')
+            );
+
+        var mapped = new Dictionary<string, string?>();
+        if (envVars.TryGetValue("SMTP_SERVER", out var v)) mapped["SmtpOptions:SmtpServer"] = v;
+        if (envVars.TryGetValue("SMTP_PORT", out v)) mapped["SmtpOptions:Port"] = v;
+        if (envVars.TryGetValue("SMTP_USERNAME", out v)) mapped["SmtpOptions:Username"] = v;
+        if (envVars.TryGetValue("SMTP_PASSWORD", out v)) mapped["SmtpOptions:Password"] = v;
+        if (envVars.TryGetValue("SMTP_FROM_EMAIL", out v)) mapped["SmtpOptions:FromEmail"] = v;
+        if (envVars.TryGetValue("SMTP_FROM_NAME", out v)) mapped["SmtpOptions:FromName"] = v;
+        if (envVars.TryGetValue("SMTP_ENABLE_SSL", out v)) mapped["SmtpOptions:EnableSsl"] = v;
+
+        builder.Configuration.AddInMemoryCollection(mapped);
+    }
+}
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
